@@ -2,7 +2,6 @@ package com.rlcv.service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.UUID;
 
 import org.springframework.data.redis.core.RedisTemplate;
@@ -15,6 +14,7 @@ import com.rlcv.repository.EventRepository;
 @Service
 public class EventService {
     private EventRepository eventRepository;
+    private EventPublisher eventPublisher;
     private RedisTemplate<String, String> redisTemplate;
 
     // empty constructor
@@ -32,27 +32,16 @@ public class EventService {
 
         eventRepository.save(event);
 
-        String counterKey = CacheKeys.counterKey(request.getUrl(), LocalDate.now());
+        String counterKey = CacheKeys.totalCount(request.getUrl(), LocalDate.now());
         redisTemplate.opsForValue().increment(counterKey);
+
+        eventPublisher.publish(event);
 
         return ("Event recorded: " + event);
     }
 
-    // get a list of all events
-    public List<Event> getEvents() {
-        return (eventRepository.findAll());
-    }
-
-    public Event getOneEvent(UUID id) {
+    // get an event
+    public Event getAnEvent(UUID id) {
         return (eventRepository.findById(id).orElseThrow());
-    }
-
-    public void deleteEvent(UUID id) {
-        eventRepository.deleteById(id);
-    }
-
-    public String buildCounterKey(String url) {
-        String today = LocalDate.now().toString();
-        return "counter:" + url + ":" + today;
     }
 }
