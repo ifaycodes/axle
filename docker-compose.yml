@@ -1,0 +1,41 @@
+services:
+    app:
+      container_name: axle-app
+      build: .
+      ports:
+        - "8080:8080"
+      env_file:
+        - .env
+      environment:
+        - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/axle
+        - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER}
+        - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
+        - SPRING_DATA_REDIS_HOST=${REDIS_HOST}
+        - RATE_LIMIT_STRATEGY=${RATE_LIMIT_STRATEGY}
+        - RATE_LIMIT_REQUESTS=${RATE_LIMIT_REQUESTS}
+        - RATE_LIMIT_WINDOW=${RATE_LIMIT_WINDOW}
+      depends_on:
+        - postgres
+        - redis
+
+    postgres:
+      container_name: axle-postgres
+      image: postgres:15
+      env_file:
+        - .env
+      environment:
+        POSTGRES_DB: ${POSTGRES_DB}
+        POSTGRES_USER: ${POSTGRES_USER}
+        POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      volumes:
+        - postgres_data:/var/lib/postgresql/data
+
+    redis:
+      container_name: axle-redis
+      image: redis:7-alpine
+      volumes:
+        - redis_data:/data
+
+volumes:
+  postgres_data:
+  redis_data:
