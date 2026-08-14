@@ -3,7 +3,9 @@ package com.rlcv.filter;
 import java.time.Duration;
 
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.stereotype.Component;
 
+@Component("log")
 public class SlidingWindowLog implements RateLimitStrategy {
 
     private RedisTemplate<String, String> redisTemplate;

@@ -4,7 +4,9 @@ import java.time.Duration;
 import java.util.List;
 
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.stereotype.Component;
 
+@Component("counter")
 public class SlidingWindowCounter implements RateLimitStrategy{
 
     private RedisTemplate<String, String> redisTemplate;
