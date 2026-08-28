@@ -1,10 +1,8 @@
 package com.rlcv.dto;
 
-import jakarta.persistence.Entity;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
-@Entity
 @Data
 public class EventRequest {
     @NotBlank(message = "url is required")
