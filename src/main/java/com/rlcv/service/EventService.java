@@ -11,14 +11,14 @@ import com.rlcv.dto.EventRequest;
 import com.rlcv.model.Event;
 import com.rlcv.repository.EventRepository;
 
-@Service
-public class EventService {
-    private EventRepository eventRepository;
-    private EventPublisher eventPublisher;
-    private RedisTemplate<String, String> redisTemplate;
+import lombok.RequiredArgsConstructor;
 
-    // empty constructor
-    public EventService() {}
+@Service
+@RequiredArgsConstructor
+public class EventService {
+    private final EventRepository eventRepository;
+    private final EventPublisher eventPublisher;
+    private final RedisTemplate<String, String> redisTemplate;
 
     // create a new event and record to db
     public String createEvent(EventRequest request, String ipAddress) {
@@ -37,7 +37,7 @@ public class EventService {
 
         eventPublisher.publish(event);
 
-        return ("Event recorded: " + event);
+        return ("Event ID: " + event.getId());
     }
 
     // get an event

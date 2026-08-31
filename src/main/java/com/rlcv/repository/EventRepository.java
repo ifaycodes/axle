@@ -16,8 +16,8 @@ public interface EventRepository extends JpaRepository<Event, UUID> {
     // check if url exists
     boolean existsByUrl(String url);
 
-    // return the details of all occurence of selected event
-    List<Event> findByUrlAndEventTypeAndTimestampBetweenAndTimestampLessThan(
+    // return the details of all occurrence of selected event
+    List<Event> findByUrlStartingWithAndEventTypeAndTimestampBetweenAndTimestampLessThan(
         String url,
         String eventType,
         LocalDateTime start,
@@ -33,12 +33,12 @@ public interface EventRepository extends JpaRepository<Event, UUID> {
     long countByUrlAndTimestampBetween(String url, LocalDateTime start, LocalDateTime end);
 
     // total events for a url by an event on a given day or within a time range
-    long countByUrlAndEventTypeAndTimestampBetween(String url, String eventType, LocalDateTime start, LocalDateTime end);
+    long countByUrlStartingWithAndEventTypeAndTimestampBetween(String url, String eventType, LocalDateTime start, LocalDateTime end);
 
     // all events for a url on a given day, grouped by event type
-    @Query("SELECT e.eventType, COUNT(e) FROM Event e WHERE e.url = :url " +
+    @Query("SELECT e.eventType, COUNT(e) FROM Event e WHERE e.url LIKE CONCAT(:url, '%') " +
             "AND e.timestamp BETWEEN :start AND :end GROUP BY e.eventType")
-    List<Object[]> countGroupedByEventType(
+    List<Object[]> countUrlStartingWithAndGroupedByEventType(
         @Param("url") String url,
         @Param("start") LocalDateTime start,
         @Param("end") LocalDateTime end
@@ -53,10 +53,10 @@ public interface EventRepository extends JpaRepository<Event, UUID> {
     );
     
     // events per hour for a url on a given day
-    @Query("SELECT HOUR(e.timestamp), COUNT(e) FROM Event e WHERE e.url = :url " +
-            "AND e.timestamp BETWEEN :start AND :end GROUP BY HOUR(e.timestamp) " +
-            "ORDER BY HOUR(e.timestamp)")
-    List<Object[]> countPerHour(
+    @Query("SELECT HOUR(e.timestamp), COUNT(e) FROM Event e WHERE e.url LIKE CONCAT(:url, '%')" +
+            "AND e.timestamp BETWEEN :start AND :end GROUP BY EXTRACT (HOUR FROM e.timestamp) " +
+            "ORDER BY EXTRACT (HOUR FROM e.timestamp)")
+    List<Object[]> countUrlStartingWithAndPerHour(
         @Param("url") String url,
         @Param("start") LocalDateTime start,
         @Param("end") LocalDateTime end
@@ -68,8 +68,11 @@ public interface EventRepository extends JpaRepository<Event, UUID> {
     );
 
     // show raw events for a domain
-    Page<Event> findByUrlStartingWithAndEventTypeAndTimestampBetween(
-        String urlPrefix, String eventType, LocalDateTime start, LocalDateTime end, LocalDateTime cursor, Pageable pageable
+    Page<Event> findByUrlStartingWithAndTimestampBetweenAndTimestampLessThan(
+        String urlPrefix, LocalDateTime start, LocalDateTime end, LocalDateTime cursor, Pageable pageable
     );
 
+    // all events for a url on a given day, grouped by event type
+    @Query("SELECT e.id, e.url, e.eventType, e.timestamp FROM Event e")
+    Page<Event> findAllEvent(Pageable pageable);
 }

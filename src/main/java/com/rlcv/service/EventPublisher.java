@@ -13,8 +13,8 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class EventPublisher {
 
-    private RedisTemplate<String, String> redisTemplate;
-    private ObjectMapper objectMapper;
+    private final RedisTemplate<String, String> redisTemplate;
+    private final ObjectMapper objectMapper;
 
     public void publish(Event event) {
         try {
