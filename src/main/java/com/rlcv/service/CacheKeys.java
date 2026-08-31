@@ -5,8 +5,8 @@ import java.time.LocalDate;
 public class CacheKeys {
 
     // event counter - per url, eventtype, date
-    public static String counter(String url, String eventType, LocalDate date) {
-        return "counter:" + url + ":" + eventType + ":" + date;
+    public static String auth(String hashKey) {
+        return "key:auth:" + hashKey;
     }
 
     // total count - per url, date (no event type)
