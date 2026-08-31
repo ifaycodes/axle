@@ -7,6 +7,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import com.rlcv.model.ApiKey;
+
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -43,12 +45,12 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private String resolveKey (HttpServletRequest request) {
         String ipAddress = request.getRemoteAddr();
         String endpoint = request.getRequestURI();
-        String apiKey = request.getHeader("X-API-KEY");
+        ApiKey apiKey = (ApiKey) request.getAttribute("apiKey");
 
         return switch (keyStrategy) {
             case "ip" -> ipAddress;
             case "endpoint" -> endpoint;
-            case "apiKey" -> apiKey != null ? apiKey : ipAddress;
+            case "apiKey" -> apiKey != null ? apiKey.getKeyHash() : ipAddress;
             case "ip+endpoint" -> ipAddress + ":" + endpoint;
             case "apikey+endpoint" -> (apiKey != null ? apiKey : ipAddress) + ":" + endpoint;
             default -> ipAddress;

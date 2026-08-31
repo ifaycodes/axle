@@ -2,14 +2,23 @@ package com.rlcv.filter;
 
 import java.time.Duration;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
+import lombok.RequiredArgsConstructor;
+
 @Component("log")
+@RequiredArgsConstructor
 public class SlidingWindowLog implements RateLimitStrategy {
 
-    private RedisTemplate<String, String> redisTemplate;
+    private final RedisTemplate<String, String> redisTemplate;
+
+    
+    @Value("${rate.limit.window}")
     private long windowSizeInSeconds;
+
+    @Value("${rate.limit.requests}")
     private long maxRequests;
 
     @Override

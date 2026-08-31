@@ -22,11 +22,12 @@ import lombok.RequiredArgsConstructor;
 @Order(1)
 public class ApiKeyFilter extends OncePerRequestFilter{
 
-    private ApiKeyService apiKeyService;
+    private final ApiKeyService apiKeyService;
 
-    protected boolean shouldNotfilter(HttpServletRequest request) {
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException{
         String path = request.getRequestURI();
-        return path.equals("/keys/generate") || path.equals("analytics/top") || path.equals("analytics/top/hourly") || path.startsWith("/swagger-ui") || path.startsWith("/v3/api-docs");
+        return path.equals("/keys/generate") || path.equals("/analytics/top") || path.equals("/analytics/") || path.equals("/analytics/top/hourly") || path.startsWith("/swagger-ui") || path.startsWith("/v3/api-docs") || path.startsWith("/h2-console");
     }
 
     @Override
