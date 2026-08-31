@@ -12,5 +12,5 @@ public class KeyRequest {
     private String owner;
 
     @NotEmpty(message = "at least one url is required")
-    private List<String> urls;
+    private List<@NotBlank(message = "enter a valid url") String> urls;
 }
