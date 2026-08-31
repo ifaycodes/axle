@@ -16,8 +16,8 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class EventSubscriber implements MessageListener{
 
-    private AnalyticsController analyticsController;
-    private ObjectMapper objectMapper;
+    private final AnalyticsController analyticsController;
+    private final ObjectMapper objectMapper;
 
     @Override
     public void onMessage(Message message, byte[] pattern) {

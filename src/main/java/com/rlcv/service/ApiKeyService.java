@@ -30,10 +30,11 @@ public class ApiKeyService {
     public String generateKey(KeyRequest request) {
         String rawKey = UUID.randomUUID().toString();
 
+        List<String> uniqueUrls = request.getUrls().stream().distinct().toList();
         apiKeyRepository.save(ApiKey.builder()
                 .keyHash(DigestUtils.sha256Hex(rawKey))
                 .owner(request.getOwner())
-                .urls(request.getUrls())
+                .urls(uniqueUrls)
                 .active(true)
                 .createdAt(LocalDateTime.now())
                 .build());
@@ -43,9 +44,10 @@ public class ApiKeyService {
 
     public void updateUrlList(List<String> newUrls, HttpServletRequest request) {
         ApiKey apiKey = (ApiKey) request.getAttribute("apiKey");
-        for (String url: newUrls) {
-            apiKey.getUrls().add(url);
-        }
+        
+        newUrls.stream()
+            .filter(u -> !apiKey.getUrls().contains(u))
+            .forEach(apiKey.getUrls()::add);
         apiKeyRepository.save(apiKey);
     }
 
