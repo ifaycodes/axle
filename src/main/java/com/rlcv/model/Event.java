@@ -37,4 +37,6 @@ public class Event {
     @NotNull
     private String ipAddress;
 
+    private UUID owner;
+
 }

@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -35,16 +36,16 @@ public class AnalyticsService {
     private final ObjectMapper objectMapper;
 
     // get all recoded events - used pageable to return 50 rows
-    public Page<Event> getAllEvent(int pageSize) {
+    public Page<Event> getAllEvent(int pageSize, UUID owner) {
         Pageable pageable = PageRequest.of(0, pageSize, Sort.by("timestamp", "id").descending());
-        return eventRepository.findAllEvent(pageable);
+        return eventRepository.findAllEvent(pageable, owner);
     }
 
     // return event details
-    public List<Event> getEventDetails(String url, String eventType, LocalDate date, LocalDateTime cursor, int pageSize) {
+    public List<Event> getEventDetails(String url, String eventType, UUID owner, LocalDate date, LocalDateTime cursor, int pageSize) {
         Pageable pageable = PageRequest.of(0, pageSize, Sort.by("timestamp", "id").descending());
-        return eventRepository.findByUrlStartingWithAndEventTypeAndTimestampBetweenAndTimestampLessThan(
-            url, eventType, date.atStartOfDay(), date.atTime(LocalTime.MAX), cursor, pageable);
+        return eventRepository.findByUrlStartingWithAndEventTypeAndOwnerAndTimestampBetweenAndTimestampLessThan(
+            url, eventType, owner, date.atStartOfDay(), date.atTime(LocalTime.MAX), cursor, pageable);
     }
 
     // keep live feed of db changes
@@ -53,31 +54,13 @@ public class AnalyticsService {
         return eventRepository.findTop15ByUrlOrderByTimestampDesc(url);
     }
 
-    // get total count for a url on a date
-    // might have to remove this
-    public AnalyticsResponse getTotalCount(String url, LocalDate date) {
-        String cacheKey = CacheKeys.totalCount(url, date);
-
-        return getCachedOrQuery(cacheKey, () -> {
-            long count = eventRepository.countByUrlAndTimestampBetween(
-                url, date.atStartOfDay(), date.atTime(LocalTime.MAX));
-
-            return AnalyticsResponse.builder()
-                    .url(url)
-                    .count(count)
-                    .date(date.toString())
-                    .eventType("all_events")
-                    .build();
-        });
-    }
-
     // get total count for a domain url
-    public AnalyticsResponse getTotalCountOnDomain(String urlPrefix, LocalDate date) {
-        String cacheKey = CacheKeys.totalCount(urlPrefix, date);
+    public AnalyticsResponse getTotalCountOnDomain(String urlPrefix, LocalDate date, UUID owner) {
+        String cacheKey = CacheKeys.totalCount(urlPrefix, owner, date);
 
         return getCachedOrQuery(cacheKey, () -> {
-            long count = eventRepository.countByUrlStartingWithAndTimestampBetween(
-                urlPrefix, date.atStartOfDay(), date.atTime(LocalTime.MAX));
+            long count = eventRepository.countByUrlStartingWithAndOwnerAndTimestampBetween(
+                urlPrefix, owner, date.atStartOfDay(), date.atTime(LocalTime.MAX));
 
             return AnalyticsResponse.builder()
                     .url(urlPrefix)
@@ -89,12 +72,12 @@ public class AnalyticsService {
     }
 
     //count by event type for a url on a date
-    public AnalyticsResponse getCountByEventType(String url, String eventType, LocalDate date) {
-        String cacheKey = CacheKeys.eventTypeQuery(url, eventType, date);
+    public AnalyticsResponse getCountByEventType(String url, String eventType, LocalDate date, UUID owner) {
+        String cacheKey = CacheKeys.eventTypeQuery(url, owner, eventType, date);
 
         return getCachedOrQuery(cacheKey, () -> {
-            long count = eventRepository.countByUrlStartingWithAndEventTypeAndTimestampBetween(
-                url, eventType, date.atStartOfDay(), date.atTime(LocalTime.MAX));
+            long count = eventRepository.countByUrlStartingWithAndEventTypeAndOwnerAndTimestampBetween(
+                url, eventType, owner, date.atStartOfDay(), date.atTime(LocalTime.MAX));
 
             return AnalyticsResponse.builder()
                     .url(url)
@@ -106,8 +89,8 @@ public class AnalyticsService {
     }
 
     // breakdown by event type for a url on a date
-    public List<EventTypeBreakdown> getEventypeBreakdown(String url, LocalDate date) {
-        String cacheKey = CacheKeys.breakdown(url, date);
+    public List<EventTypeBreakdown> getEventypeBreakdown(String url, UUID owner, LocalDate date) {
+        String cacheKey = CacheKeys.breakdown(url, owner, date);
         String cached =  redisTemplate.opsForValue().get(cacheKey);
 
         if (cached != null) {
@@ -115,12 +98,12 @@ public class AnalyticsService {
         }
 
         List<Object[]> results = eventRepository.countUrlStartingWithAndGroupedByEventType(
-            url, date.atStartOfDay(), date.atTime(LocalTime.MAX));
+            url, owner, date.atStartOfDay(), date.atTime(LocalTime.MAX));
 
         List<EventTypeBreakdown> breakdown = results.stream()
             .map(row -> EventTypeBreakdown.builder()
                     .eventType((String) row[0])
-                    .count((Long) row[1])
+                    .count((long) row[1])
                     .build())
             .collect(Collectors.toList());
 
@@ -129,21 +112,21 @@ public class AnalyticsService {
     }
 
     // top urls by event count on a date
-    public List<TopUrlResult> getTopUrls(LocalDate date) {
-        String cacheKey = CacheKeys.topUrls(date);
+    public List<TopUrlResult> getTopUrls(UUID owner, LocalDate date) {
+        String cacheKey = CacheKeys.topUrls(owner, date);
         String cached = redisTemplate.opsForValue().get(cacheKey);
 
         if (cached != null) {
             return deserializeList(cached, TopUrlResult.class);
         }
 
-        List<Object[]> results = eventRepository.findTopUrls(
+        List<Object[]> results = eventRepository.findTopUrls(owner,
             date.atStartOfDay(), date.atTime(LocalTime.MAX));
 
         List<TopUrlResult> topUrls = results.stream()
             .map(row -> TopUrlResult.builder()
                     .url((String) row[0])
-                    .count((Long) row[1])
+                    .count((long) row[1])
                     .build()
                 )
             .collect(Collectors.toList());
@@ -153,8 +136,8 @@ public class AnalyticsService {
     }
 
     // events per hour for a url on a date
-    public List<HourlyBreakdown> getHourlyBreakdown(String url, LocalDate date) {
-        String cacheKey = CacheKeys.hourly(url, date);
+    public List<HourlyBreakdown> getHourlyBreakdown(String url, UUID owner, LocalDate date) {
+        String cacheKey = CacheKeys.hourly(url, owner, date);
         String cached = redisTemplate.opsForValue().get(cacheKey);
 
         if (cached != null) {
@@ -162,12 +145,12 @@ public class AnalyticsService {
         }
 
         List<Object[]> results = eventRepository.countUrlStartingWithAndPerHour(
-            url, date.atStartOfDay(), date.atTime(LocalTime.MAX));
+            url, owner, date.atStartOfDay(), date.atTime(LocalTime.MAX));
 
         List<HourlyBreakdown> hourly = results.stream()
             .map(row -> HourlyBreakdown.builder()
                     .hour((int) row[0])
-                    .count((Long) row[1])
+                    .count((long) row[1])
                     .build()
                 )
             .collect(Collectors.toList());
@@ -177,10 +160,10 @@ public class AnalyticsService {
     }
 
     // return event details for a domain
-    public Page<Event> getEventDetailsByDomain(String url, LocalDate date, LocalDateTime cursor, int pageSize) {
+    public Page<Event> getEventDetailsByDomain(String url, UUID owner, LocalDate date, LocalDateTime cursor, int pageSize) {
         Pageable pageable = PageRequest.of(0, pageSize, Sort.by("timestamp", "id").descending());
-        return eventRepository.findByUrlStartingWithAndTimestampBetweenAndTimestampLessThan(
-            url, date.atStartOfDay(), date.atTime(LocalTime.MAX), cursor, pageable);
+        return eventRepository.findByUrlStartingWithAndOwnerAndTimestampBetweenAndTimestampLessThan(
+            url, owner, date.atStartOfDay(), date.atTime(LocalTime.MAX), cursor, pageable);
     }
 
 

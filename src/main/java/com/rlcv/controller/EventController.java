@@ -38,8 +38,8 @@ public class EventController {
         if (!apiKeyService.ownsUrl(apiKey, request.getUrl())) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
-
-        return ResponseEntity.ok(eventService.createEvent(request, ipAddress));
+        UUID ownerId = apiKey.getId();
+        return ResponseEntity.ok(eventService.createEvent(request, ipAddress, ownerId));
     }
 
     @GetMapping("/{id}")

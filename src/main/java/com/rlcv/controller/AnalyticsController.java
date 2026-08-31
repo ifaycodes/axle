@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -47,9 +48,11 @@ public class AnalyticsController {
     @GetMapping("/")
     @Operation(summary = "Return all recorded events")
     public ResponseEntity<Page<Event>> getRecordedEvents(
-        @RequestParam(defaultValue = "50") int size
+        @RequestParam(defaultValue = "50") int size,
+        HttpServletRequest httpRequest
     ) {
-        return ResponseEntity.ok(analyticsService.getAllEvent(size));
+        UUID ownerId = getApiKey(httpRequest).getId();
+        return ResponseEntity.ok(analyticsService.getAllEvent(size, ownerId));
     }
 
     @GetMapping("/{url}")
@@ -60,9 +63,9 @@ public class AnalyticsController {
             HttpServletRequest httpRequest
     ) {
         checkOwnership(httpRequest, url);
-        
+        UUID ownerId = getApiKey(httpRequest).getId();
         LocalDate queryDate = date != null ? date : LocalDate.now();
-        return ResponseEntity.ok(analyticsService.getTotalCountOnDomain(url, queryDate));
+        return ResponseEntity.ok(analyticsService.getTotalCountOnDomain(url, queryDate, ownerId));
     }
 
     @GetMapping("/{url}/eventtype")
@@ -74,9 +77,9 @@ public class AnalyticsController {
             HttpServletRequest httpRequest
     ) {
         checkOwnership(httpRequest, url);
-
+        UUID ownerId = getApiKey(httpRequest).getId();
         LocalDate queryDate = date != null ? date : LocalDate.now();
-        return ResponseEntity.ok(analyticsService.getCountByEventType(url, eventType, queryDate));
+        return ResponseEntity.ok(analyticsService.getCountByEventType(url, eventType, queryDate, ownerId));
     }
 
     @GetMapping("/{url}/breakdown")
@@ -87,18 +90,20 @@ public class AnalyticsController {
             HttpServletRequest httpRequest
     ) {
         checkOwnership(httpRequest, url);
-
+        UUID ownerId = getApiKey(httpRequest).getId();
         LocalDate queryDate = date != null ? date : LocalDate.now();
-        return ResponseEntity.ok(analyticsService.getEventypeBreakdown(url, queryDate));
+        return ResponseEntity.ok(analyticsService.getEventypeBreakdown(url, ownerId, queryDate));
     }
 
     @GetMapping("/top")
     @Operation(summary = "Get list of top urls in descending order")
     public ResponseEntity<List<TopUrlResult>> getTopUrls(
+            HttpServletRequest httpRequest,
             @RequestParam(required = false) LocalDate date
     ) {
+        UUID ownerId = getApiKey(httpRequest).getId();
         LocalDate queryDate = date != null ? date : LocalDate.now();
-        return ResponseEntity.ok(analyticsService.getTopUrls(queryDate));
+        return ResponseEntity.ok(analyticsService.getTopUrls(ownerId, queryDate));
     }
 
     @GetMapping("/{url}/hourly")
@@ -109,9 +114,9 @@ public class AnalyticsController {
             HttpServletRequest httpRequest
     ) {
         checkOwnership(httpRequest, url);
-
+        UUID ownerId = getApiKey(httpRequest).getId();
         LocalDate queryDate = date != null ? date : LocalDate.now();
-        return ResponseEntity.ok(analyticsService.getHourlyBreakdown(url, queryDate));
+        return ResponseEntity.ok(analyticsService.getHourlyBreakdown(url, ownerId, queryDate));
     }
 
     @GetMapping("/{url}/eventtype/details")
@@ -125,10 +130,10 @@ public class AnalyticsController {
             HttpServletRequest httpRequest
     ) {
         checkOwnership(httpRequest, url);
-
+        UUID ownerId = getApiKey(httpRequest).getId();
         LocalDate queryDate = date != null ? date : LocalDate.now();
         LocalDateTime startingCursor = cursor != null ? cursor : queryDate.atTime(LocalTime.MAX);
-        return ResponseEntity.ok(analyticsService.getEventDetails(url, eventType, queryDate, startingCursor, size));
+        return ResponseEntity.ok(analyticsService.getEventDetails(url, eventType, ownerId, queryDate, startingCursor, size));
     }
 
     @GetMapping("/{url}/details")
@@ -141,10 +146,10 @@ public class AnalyticsController {
             HttpServletRequest httpRequest
     ) {
         checkOwnership(httpRequest, url);
-
+        UUID ownerId = getApiKey(httpRequest).getId();
         LocalDate queryDate = date != null ? date : LocalDate.now();
         LocalDateTime startingCursor = cursor != null ? cursor : queryDate.atTime(LocalTime.MAX);
-        return ResponseEntity.ok(analyticsService.getEventDetailsByDomain(url, queryDate, startingCursor, size));
+        return ResponseEntity.ok(analyticsService.getEventDetailsByDomain(url, ownerId, queryDate, startingCursor, size));
     }
 
     @Operation(summary = "Constant feed of the last 15 events in the db")
@@ -179,10 +184,13 @@ public class AnalyticsController {
 
 
     private void checkOwnership(HttpServletRequest httpRequest, String url) {
-        ApiKey apiKey = (ApiKey) httpRequest.getAttribute("apiKey");
-
+        ApiKey apiKey = getApiKey(httpRequest);
         if (!apiKeyService.ownsUrl(apiKey, url)) {
             throw new AccessDeniedException("You do not own this URL");
         }
+    }
+
+    private ApiKey getApiKey(HttpServletRequest request) {
+        return (ApiKey) request.getAttribute("apiKey");
     }
 }

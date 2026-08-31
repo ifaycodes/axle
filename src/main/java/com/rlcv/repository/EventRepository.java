@@ -17,9 +17,10 @@ public interface EventRepository extends JpaRepository<Event, UUID> {
     boolean existsByUrl(String url);
 
     // return the details of all occurrence of selected event
-    List<Event> findByUrlStartingWithAndEventTypeAndTimestampBetweenAndTimestampLessThan(
+    List<Event> findByUrlStartingWithAndEventTypeAndOwnerAndTimestampBetweenAndTimestampLessThan(
         String url,
         String eventType,
+        UUID owner,
         LocalDateTime start,
         LocalDateTime end,
         LocalDateTime cursor,
@@ -33,46 +34,49 @@ public interface EventRepository extends JpaRepository<Event, UUID> {
     long countByUrlAndTimestampBetween(String url, LocalDateTime start, LocalDateTime end);
 
     // total events for a url by an event on a given day or within a time range
-    long countByUrlStartingWithAndEventTypeAndTimestampBetween(String url, String eventType, LocalDateTime start, LocalDateTime end);
+    long countByUrlStartingWithAndEventTypeAndOwnerAndTimestampBetween(String url, String eventType, UUID owner, LocalDateTime start, LocalDateTime end);
 
     // all events for a url on a given day, grouped by event type
-    @Query("SELECT e.eventType, COUNT(e) FROM Event e WHERE e.url LIKE CONCAT(:url, '%') " +
+    @Query("SELECT e.eventType, COUNT(e) FROM Event e WHERE owner = :owner AND e.url LIKE CONCAT(:url, '%') " +
             "AND e.timestamp BETWEEN :start AND :end GROUP BY e.eventType")
     List<Object[]> countUrlStartingWithAndGroupedByEventType(
         @Param("url") String url,
+        @Param("owner") UUID owner,
         @Param("start") LocalDateTime start,
         @Param("end") LocalDateTime end
     );
 
     // top url for a event count on a given day, in desc order
-    @Query("SELECT e.url, COUNT(e) FROM Event e WHERE e.timestamp BETWEEN :start AND :end " +
+    @Query("SELECT e.url, COUNT(e) FROM Event e WHERE owner = :owner AND e.timestamp BETWEEN :start AND :end " +
             "GROUP BY e.url ORDER BY COUNT(e) DESC")
     List<Object[]> findTopUrls(
+        @Param("owner") UUID owner,
         @Param("start") LocalDateTime start,
         @Param("end") LocalDateTime end
     );
     
     // events per hour for a url on a given day
-    @Query("SELECT HOUR(e.timestamp), COUNT(e) FROM Event e WHERE e.url LIKE CONCAT(:url, '%')" +
+    @Query("SELECT HOUR(e.timestamp), COUNT(e) FROM Event e WHERE owner = :owner AND e.url LIKE CONCAT(:url, '%')" +
             "AND e.timestamp BETWEEN :start AND :end GROUP BY EXTRACT (HOUR FROM e.timestamp) " +
             "ORDER BY EXTRACT (HOUR FROM e.timestamp)")
     List<Object[]> countUrlStartingWithAndPerHour(
         @Param("url") String url,
+        @Param("owner") UUID owner,
         @Param("start") LocalDateTime start,
         @Param("end") LocalDateTime end
     );
 
     // count all events for a domain regardless of path
-    long countByUrlStartingWithAndTimestampBetween(
-        String urlPrefix, LocalDateTime start, LocalDateTime end
+    long countByUrlStartingWithAndOwnerAndTimestampBetween(
+        String urlPrefix, UUID owner, LocalDateTime start, LocalDateTime end
     );
 
     // show raw events for a domain
-    Page<Event> findByUrlStartingWithAndTimestampBetweenAndTimestampLessThan(
-        String urlPrefix, LocalDateTime start, LocalDateTime end, LocalDateTime cursor, Pageable pageable
+    Page<Event> findByUrlStartingWithAndOwnerAndTimestampBetweenAndTimestampLessThan(
+        String urlPrefix, UUID owner, LocalDateTime start, LocalDateTime end, LocalDateTime cursor, Pageable pageable
     );
 
     // all events for a url on a given day, grouped by event type
-    @Query("SELECT e.id, e.url, e.eventType, e.timestamp FROM Event e")
-    Page<Event> findAllEvent(Pageable pageable);
+    @Query("SELECT e.id, e.url, e.eventType, e.timestamp FROM Event e WHERE owner = :owner")
+    Page<Event> findAllEvent(Pageable pageable, @Param("owner") UUID owner);
 }

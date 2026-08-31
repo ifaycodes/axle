@@ -27,7 +27,7 @@ public class ApiKeyFilter extends OncePerRequestFilter{
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException{
         String path = request.getRequestURI();
-        return path.equals("/keys/generate") || path.equals("/analytics/top") || path.equals("/analytics/") || path.equals("/analytics/top/hourly") || path.startsWith("/swagger-ui") || path.startsWith("/v3/api-docs") || path.startsWith("/h2-console");
+        return path.equals("/keys/generate") || path.startsWith("/swagger-ui") || path.startsWith("/v3/api-docs") || path.startsWith("/h2-console");
     }
 
     @Override

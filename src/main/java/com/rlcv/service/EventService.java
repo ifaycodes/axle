@@ -21,18 +21,19 @@ public class EventService {
     private final RedisTemplate<String, String> redisTemplate;
 
     // create a new event and record to db
-    public String createEvent(EventRequest request, String ipAddress) {
+    public String createEvent(EventRequest request, String ipAddress, UUID owner) {
         
         Event event = Event.builder()
                 .url(request.getUrl())
                 .eventType(request.getEventType())
                 .ipAddress(ipAddress)
                 .timestamp(LocalDateTime.now())
+                .owner(owner)
                 .build();
 
         eventRepository.save(event);
 
-        String counterKey = CacheKeys.totalCount(request.getUrl(), LocalDate.now());
+        String counterKey = CacheKeys.totalCount(request.getUrl(), owner,LocalDate.now());
         redisTemplate.opsForValue().increment(counterKey);
 
         eventPublisher.publish(event);
